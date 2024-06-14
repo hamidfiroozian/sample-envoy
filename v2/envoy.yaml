@@ -1,0 +1,94 @@
+static_resources:
+  listeners:
+    - name: listener_0
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 8080 }
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: backend
+                      domains: ["*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          route:
+                            cluster: service_cluster
+                            max_stream_duration:
+                              grpc_timeout_header_max: 15s
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config: {}
+                  - name: envoy.filters.http.lua
+                    typed_config:
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
+                      inline_code: |
+                        function envoy_on_request(request_handle)
+                            local headers = request_handle:headers()
+                            local user_key = headers:get("x-user-key")
+                            
+                            -- Call third-party authentication endpoint
+                            local http_request = {
+                                headers = {
+                                    [":method"] = "GET",
+                                    [":path"] = "/auth/" .. user_key,
+                                    [":authority"] = "localhost",
+                                },
+                                body = "",
+                                timeout = 5000,  -- Timeout in milliseconds
+                            }
+                            local response_headers, response_body = request_handle:httpCall("rate_limit_service_cluster", http_request)
+
+                            -- Check response from authentication endpoint
+                            if response_headers and response_headers[":status"] == "200" then
+                                request_handle:logInfo("User with key " .. user_key .. " is authorized")
+                                request_handle:continue()
+                            else
+                                request_handle:logWarn("User with key " .. user_key .. " is unauthorized")
+                                request_handle:sendLocalResponse(403, "Forbidden", "Unauthorized")
+                            end
+                        end
+                  - name: envoy.filters.http.ratelimit
+                    typed_config:
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"
+                      domain: "request_limit"
+                      stage: 0
+                      rate_limit_service:
+                        grpc_service:
+                          envoy_grpc:
+                            cluster_name: rate_limit_service_cluster
+      listener_filters:
+        - name: "envoy.filters.listener.tls_inspector"
+
+  clusters:
+    - name: service_cluster
+      connect_timeout: 0.25s
+      type: LOGICAL_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: service_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: your_upstream_service
+                      port_value: 80
+
+    - name: rate_limit_service_cluster
+      connect_timeout: 1s
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: rate_limit_service_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: rate_limit_service_address
+                      port_value: 8081
