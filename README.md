@@ -1,6 +1,6 @@
 # envoy for v2ray
 
-  create .env file and insert DESTINATION_ADDRESS and DESTINATION_PORT <br/>
+  first install docker and docker compose ,second create .env file and insert DESTINATION_ADDRESS and DESTINATION_PORT <br/>
   then run 
 ``` bash 
     export $(cat .env | xargs)    # Load the environment variables
