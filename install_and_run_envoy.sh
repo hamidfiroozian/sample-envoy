@@ -49,8 +49,12 @@ fi
 sudo mkdir -p /etc/envoy
 sudo cp ./envoy.yaml /etc/envoy/envoy.yaml
 
-# Create a systemd service file for Envoy
-sudo tee /etc/systemd/system/envoy.service > /dev/null <<EOF
+# Ask user if they want to create a service
+read -p "Do you want to create an Envoy service? (y/n): " create_service
+
+if [ "$create_service" = "y" ] || [ "$create_service" = "Y" ]; then
+    # Create a systemd service file for Envoy
+    sudo tee /etc/systemd/system/envoy.service > /dev/null <<EOF
 [Unit]
 Description=Envoy Proxy
 After=network.target
@@ -65,12 +69,20 @@ Group=root
 WantedBy=multi-user.target
 EOF
 
-# Reload systemd to pick up the new service file
-sudo systemctl daemon-reload
+    # Reload systemd to pick up the new service file
+    sudo systemctl daemon-reload
 
-# Start and enable the Envoy service
-sudo systemctl start envoy
-sudo systemctl enable envoy
+    # Start and enable the Envoy service
+    sudo systemctl start envoy
+    sudo systemctl enable envoy
 
-# Check if Envoy is running
-sudo systemctl status envoy
+    # Check if Envoy is running
+    sudo systemctl status envoy
+
+    echo "Envoy service has been created, started, and enabled."
+else
+    echo "Skipping service creation. You can manually start Envoy using:"
+    echo "envoy -c /etc/envoy/envoy.yaml"
+fi
+
+echo "Envoy installation and setup complete."
