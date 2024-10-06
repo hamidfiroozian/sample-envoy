@@ -1,0 +1,30 @@
+static_resources:
+  listeners:
+    - name: openvpn_listener
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 1194  # Standard OpenVPN port
+      listener_filters:
+        - name: envoy.filters.udp_listener.udp_proxy
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+            stat_prefix: openvpn_stats
+            cluster: openvpn_cluster
+            upstream_socket_config:
+              max_rx_datagram_size: 1500  # Adjust based on your MTU
+
+  clusters:
+    - name: openvpn_cluster
+      connect_timeout: 1s
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: openvpn_cluster
+        endpoints:
+          - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: ${DESTINATION_ADDRESS}  # Replace with your OpenVPN server address
+                    port_value: 1194  # OpenVPN server port

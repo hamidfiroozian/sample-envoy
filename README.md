@@ -5,6 +5,7 @@
 ``` bash 
     export $(cat .env | xargs)    # Load the environment variables
     envsubst < envoy-template.yaml > envoy.yaml
+    envsubst < opvn.envoy.template.yaml > envoy.yaml
 ```
 
 then you can run 
