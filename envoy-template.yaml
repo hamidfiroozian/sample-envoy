@@ -12,7 +12,7 @@ static_resources:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
                 stat_prefix: destination_tcp
                 cluster: service_v2ray
-                idle_timeout: 1h
+                idle_timeout: 3600s
 
   clusters:
     - name: service_v2ray
