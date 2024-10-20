@@ -1,108 +1,32 @@
 static_resources:
   listeners:
-    - address:
-        socket_address:
-          address: 0.0.0.0
-          port_value: 80
-      filter_chains:
-        - filters:
-          - name: envoy.filters.network.http_connection_manager
-            typed_config: 
-              '@type': "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
-              stat_prefix: http_proxy
-              route_config: 
-                name: all
-                virtual_hosts:
-                  - name: allbackend_cluster
-                    domains: 
-                      - '*'
-                    routes:
-                      - match: { prefix: "/admin"}
-                        direct_response: {status: 403, body: { inline_string: "Forbidden, yo"} }
-                      - match: { prefix: "/app1"}
-                        route:
-                          cluster: app1_cluster
-                      - match: { prefix: "/app2"}
-                        route:
-                          cluster: app2_cluster
-                      - match: { prefix: "/"}
-                        route:
-                          cluster: allbackend_cluster
-              http_filters:
-                  - name: envoy.filters.http.router
-                    typed_config:
-                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-
+  - name: listener_0
+    address:
+      socket_address: { address: 0.0.0.0, port_value: 10000 }
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.tcp_proxy
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+          stat_prefix: tcp
+          cluster: openvpn_service
+  
   clusters:
-    - name: allbackend_cluster
-      connect_timeout: 1s
-      type: strict_dns
-      lb_policy: round_robin
-      load_assignment:
-        cluster_name: allbackend_cluster
-        endpoints:
-          - lb_endpoints:
-            - endpoint:
-                address:
-                  socket_address:
-                    address: husseinmac
-                    port_value: 1111
-            
-            - endpoint:
-                address:
-                  socket_address:
-                    address: husseinmac
-                    port_value: 2222
-                  
-            - endpoint:
-                address:
-                  socket_address:
-                    address: husseinmac
-                    port_value: 3333
+  - name: openvpn_service
+    connect_timeout: 0.25s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: openvpn_service
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 1194
 
-            - endpoint:
-                address:
-                  socket_address:
-                    address: husseinmac
-                    port_value: 4444
-    - name: app1_cluster
-      connect_timeout: 1s
-      type: strict_dns
-      lb_policy: round_robin
-      load_assignment:
-            cluster_name: app1_cluster
-            endpoints:
-              - lb_endpoints:
-                - endpoint:
-                    address:
-                      socket_address:
-                        address: husseinmac
-                        port_value: 1111
-                
-                - endpoint:
-                    address:
-                      socket_address:
-                        address: husseinmac
-                        port_value: 2222
-    - name: app2_cluster
-      connect_timeout: 1s
-      type: strict_dns
-      lb_policy: round_robin
-      load_assignment:
-            cluster_name: app2_cluster
-            endpoints:
-              - lb_endpoints:
-                - endpoint:
-                    address:
-                      socket_address:
-                        address: husseinmac
-                        port_value: 3333
-                
-                - endpoint:
-                    address:
-                      socket_address:
-                        address: husseinmac
-                        port_value: 4444
-
-
-    
+admin:
+  access_log_path: /tmp/admin_access.log
+  address:
+    socket_address: { address: 0.0.0.0, port_value: 9901 }
