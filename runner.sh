@@ -19,18 +19,41 @@ fi
 
 
 
-# Update package list and install dependencies
+# Update system packages
 sudo apt-get update
-sudo apt-get install -y apt-transport-https gnupg2 curl lsb-release
 
-# Add Envoy repository
-curl -sL 'https://deb.dl.getenvoy.io/public/gpg.key' | sudo apt-key add -
-echo "deb [arch=amd64] https://deb.dl.getenvoy.io/public/deb/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/getenvoy.list
+# Install necessary dependencies
+sudo apt-get install -y curl apt-transport-https ca-certificates gnupg2 gettext
 
+# Add Envoy's official GPG key
+sudo mkdir -p /etc/apt/keyrings
+wget -O- https://apt.envoyproxy.io/signing.key | sudo gpg --dearmor -o /etc/apt/keyrings/envoy-keyring.gpg
 
-# Update package list again and install Envoy
+# Add the Envoy APT repository
+echo "deb [signed-by=/etc/apt/keyrings/envoy-keyring.gpg] https://apt.envoyproxy.io bookworm main" | sudo tee /etc/apt/sources.list.d/envoy.list
+
+# Update the APT package list
 sudo apt-get update
-sudo apt-get install -y getenvoy-envoy
+
+# Install Envoy
+sudo apt-get install -y envoy
+
+# Verify installation
+if envoy --version; then
+    echo "Envoy installed successfully!"
+else
+    echo "Envoy installation failed."
+    exit 1
+fi
+
+# Load the environment variables from .env file
+if [ -f .env ]; then
+    export $(cat .env | xargs)
+    echo "Environment variables loaded."
+else
+    echo ".env file not found, please make sure it exists."
+    exit 1
+fi
 
 
 # Run Envoy with the provided config file
