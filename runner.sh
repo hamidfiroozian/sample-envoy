@@ -55,6 +55,18 @@ else
     exit 1
 fi
 
+# Substitute environment variables into envoy-template.yaml and create envoy.yaml
+if [ -f envoy-template.yaml ]; then
+    envsubst < envoy-template.yaml > envoy.yaml
+    echo "envoy.yaml file created from template."
+else
+    echo "envoy-template.yaml file not found."
+    exit 1
+fi
+
+
+
+
 
 # Run Envoy with the provided config file
 echo "Starting Envoy with config file: $CONFIG_FILE"
